@@ -1,0 +1,15 @@
+/NOLOGO
+/errorReport:prompt
+/MACHINE:x64
+/SUBSYSTEM:WINDOWS
+/DEF
+/NAME:"UnrealEditor-MenuUI.dll"
+/IGNORE:4221
+/NODEFAULTLIB
+"C:/Users/itizi/Documents/Unreal Projects/ResizableMenuBox_UE5/Intermediate/Build/Win64/x64/ResizableMenuBox_UE5Editor/Development/UnrealEd/SharedPCH.UnrealEd.Project.ValApi.ValExpApi.Cpp20.h.obj"
+"C:/Users/itizi/Documents/Unreal Projects/ResizableMenuBox_UE5/Plugins/MenuUI/Intermediate/Build/Win64/x64/UnrealEditor/Development/MenuUI/Module.MenuUI.cpp.obj"
+"C:/Users/itizi/Documents/Unreal Projects/ResizableMenuBox_UE5/Plugins/MenuUI/Intermediate/Build/Win64/x64/UnrealEditor/Development/MenuUI/MenuUI.cpp.obj"
+"C:/Users/itizi/Documents/Unreal Projects/ResizableMenuBox_UE5/Plugins/MenuUI/Intermediate/Build/Win64/x64/UnrealEditor/Development/MenuUI/ResizableMenuBox.cpp.obj"
+"C:/Users/itizi/Documents/Unreal Projects/ResizableMenuBox_UE5/Plugins/MenuUI/Intermediate/Build/Win64/x64/UnrealEditor/Development/MenuUI/SResizableMenuBox.cpp.obj"
+"C:/Users/itizi/Documents/Unreal Projects/ResizableMenuBox_UE5/Plugins/MenuUI/Intermediate/Build/Win64/x64/UnrealEditor/Development/MenuUI/Default.rc2.res"
+/OUT:"C:/Users/itizi/Documents/Unreal Projects/ResizableMenuBox_UE5/Plugins/MenuUI/Intermediate/Build/Win64/x64/UnrealEditor/Development/MenuUI/UnrealEditor-MenuUI.lib"

@@ -1,0 +1,14 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.MenuUI.cpp.obj": [
+			"MenuUI.init.gen.cpp.obj",
+			"ResizableMenuBox.gen.cpp.obj",
+			"SResizableMenuBox.gen.cpp.obj",
+			"PerModuleInline.gen.cpp.obj",
+			"MenuUI.cpp.obj",
+			"ResizableMenuBox.cpp.obj",
+			"SResizableMenuBox.cpp.obj"
+		]
+	}
+}
