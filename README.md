@@ -1,4 +1,9 @@
 # Resizable Menu Box
 ## 使い方
-「.uproject」とおなじ場所に「Plugins」フォルダを展開
+### フォルダ管理
+.uprojectとおなじ場所にPluginsフォルダを展開し、その中にMenuUIフォルダを入れてください
+
+### UEエディタでの使用方法
+
+**パラメータ**
 
