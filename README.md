@@ -7,4 +7,14 @@
 
 **パラメータ**
 
-![Project Logo](https://raw.githubusercontent.com/username/repo/main/logo.png)
+![Param](https://github.com/muka149/ResizableMenuBox/blob/main/Param_RMB.png)
+
+**・Split Type**
+
+分割方向を縦か横に指定します
+
+**・Split Ratio**
+
+スプリット比率を調整します
+
+
