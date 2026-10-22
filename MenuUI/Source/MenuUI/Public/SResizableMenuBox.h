@@ -9,9 +9,8 @@
 /**
  * 
  */
-#define SPLITTER_HALF_THICKNESS  0.003f
 
-DECLARE_DELEGATE_RetVal_TwoParams(bool, FOnSplitterMoved, FGuid, FAnchors)
+DECLARE_DELEGATE_TwoParams(FOnSplitterMoved, FGuid&, float)
 
 UENUM(BlueprintType)
 enum class ESplitType : uint8
@@ -22,10 +21,10 @@ enum class ESplitType : uint8
 
 struct FSplitter
 {
-	TSharedPtr<SBox> Box;	
-	FVector2D CanvasSize;
-	FAnchors Anchors;
-	FGuid ID;
+	TSharedPtr<SBox> box;	
+	FGuid id;
+	SConstraintCanvas::FSlot* slot;
+	float offset_val;
 };
 
 class MENUUI_API SResizableMenuBox : public SConstraintCanvas
@@ -50,10 +49,17 @@ protected:
 	
 private:
 	const FSplitter* FindFocusedSplitter(const FVector2D CursorPos) const;
+	int32 GetActiveSplitterIdx() const;
+	TPair<float, float> GetNeighborOffsetVal(int32 idx);
 
 	TSharedPtr<SConstraintCanvas> CanvasPanel;
-	TArray<FSplitter> SplitterArr;
-	ESplitType SplitType;
-	FSplitter ActiveSplitter;
-	FOnSplitterMoved OnSplitterMoved;
+	TArray<FSplitter> splitter_array_;
+	ESplitType split_type_;
+	FSplitter active_splitter_;
+	FOnSplitterMoved on_splitter_move_;
+
+	FVector2D start_mouse_pos_ = FVector2D(0);
+	FVector2D split_size_   = FVector2D(0);
+
+	inline static constexpr float kSplitterThickness = 5.f;
 };

@@ -4,7 +4,8 @@
 #include "SResizableMenuBox.h"
 #include "SlateOptMacros.h"
 
-//bool SResizableMenuBox::bIsResizeing = false;
+// 最小領域
+static constexpr float kLimitSpace = 10.f;
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 /// <summary>
@@ -13,31 +14,39 @@ BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 /// <param name="InArgs"></param>
 void SResizableMenuBox::Construct(const FArguments& InArgs)
 {
-	SplitType = InArgs._SplitType;
-	OnSplitterMoved = InArgs._OnSplitterMoved;
+	split_type_ = InArgs._SplitType;
+	on_splitter_move_ = InArgs._OnSplitterMoved;
 }
 
 /// <summary>
 /// スプリッターの追加
 /// </summary>
-/// <param name="Anchors"></param>
-/// <param name="ID"></param>
-void SResizableMenuBox::AddSplitter(const FAnchors& Anchors , const FGuid& ID)
+/// <param name="anhors"></param>
+/// <param name="id"></param>
+void SResizableMenuBox::AddSplitter(const FAnchors& anchors , const FGuid& id)
 {
 	TSharedPtr<SBox> splitter_box = SNew(SBox)[SNew(SImage).ColorAndOpacity(FLinearColor::Black)];
 
+	FMargin offset = split_type_ == ESplitType::Horizontal ? 
+		FMargin(0.f, 0.f, kSplitterThickness, 0.f) : 
+		FMargin(0.f, 0.f, 0.f, kSplitterThickness);
+
+	FSplitter splitter;
+
 	this->AddSlot()
-		.Anchors(Anchors)
+		.Anchors(anchors)
+		.Offset(offset)
+		.Alignment(FVector2D(0.5f))
+		.Expose(splitter.slot)
 		[
 			splitter_box.ToSharedRef()
 		];
 
-	FSplitter splitter;
-	splitter.Box = splitter_box;
-	splitter.Anchors = Anchors;
-	splitter.ID = ID;
+	splitter.box = splitter_box;
+	splitter.id = id;
+	splitter.offset_val = 0.f;
 
-	SplitterArr.Add(splitter);
+	splitter_array_.Add(splitter);
 }
 
 /// <summary>
@@ -49,11 +58,12 @@ void SResizableMenuBox::AddSplitter(const FAnchors& Anchors , const FGuid& ID)
 FReply SResizableMenuBox::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
 	auto splitter_ptr = FindFocusedSplitter(MouseEvent.GetScreenSpacePosition());
-	if (splitter_ptr)
-	{
-		ActiveSplitter = *splitter_ptr;
-		ActiveSplitter.CanvasSize = this->GetTickSpaceGeometry().GetLocalSize();
-		
+	if (splitter_ptr){
+
+		active_splitter_ = *splitter_ptr;
+		start_mouse_pos_ = active_splitter_.box->GetTickSpaceGeometry().AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+		split_size_ = MyGeometry.GetLocalSize() / (splitter_array_.Num() + 1);
+
 		return FReply::Handled().CaptureMouse(SharedThis(this));
 	}
 
@@ -68,39 +78,74 @@ FReply SResizableMenuBox::OnMouseButtonDown(const FGeometry& MyGeometry, const F
 /// <returns></returns>
 FReply SResizableMenuBox::OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	auto splitter_box = ActiveSplitter.Box;
-	if (splitter_box.IsValid())
-	{
-		if (HasMouseCapture())
-		{
-			const FVector2D mouse_pos = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
-			const FVector2D delta = mouse_pos / ActiveSplitter.CanvasSize;
+	if (active_splitter_.slot){
+		if (HasMouseCapture()){
 
-			FAnchors new_anchors;
-			if (SplitType == ESplitType::Horizontal){
-				 new_anchors = FAnchors(delta.X - SPLITTER_HALF_THICKNESS, 0.0f, delta.X + SPLITTER_HALF_THICKNESS, 1.f);
-			}
-			else{
-				new_anchors = FAnchors(0.0f, delta.Y - SPLITTER_HALF_THICKNESS, 1.0f, delta.Y + SPLITTER_HALF_THICKNESS);
-			}
-			
-			if (OnSplitterMoved.IsBound())
-			{
-				const bool b_can_split = OnSplitterMoved.Execute(ActiveSplitter.ID, new_anchors);
-				if (b_can_split)
-				{
-					this->RemoveSlot(splitter_box.ToSharedRef());
-					this->AddSlot()
-						.Anchors(new_anchors)
-						[
-							splitter_box.ToSharedRef()
-						];
-				}
-			}
+			FVector2D crr_mouse_pos = active_splitter_.box->GetTickSpaceGeometry().AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+			FVector2D mouse_delta = crr_mouse_pos - start_mouse_pos_;
+			FMargin offsets = active_splitter_.slot->GetOffset();
+
+			const bool kIsHorizontal = split_type_ == ESplitType::Horizontal;
+			float& offset_val = kIsHorizontal ? offsets.Left : offsets.Top;
+			const float kDelta = kIsHorizontal ? mouse_delta.X : mouse_delta.Y;
+			const float kSplitSize = kIsHorizontal ? split_size_.X : split_size_.Y;
+
+			// Offset更新・範囲制限
+			offset_val += kDelta;
+			const int32 kIdx = GetActiveSplitterIdx();
+			auto neighbor_offset_val = GetNeighborOffsetVal(kIdx);
+			offset_val = FMath::Clamp(offset_val, -kSplitSize + neighbor_offset_val.Key + kLimitSpace, kSplitSize + neighbor_offset_val.Value - kLimitSpace);
+			splitter_array_[kIdx].offset_val = offset_val;
+
+			// Delegate通知
+			on_splitter_move_.Execute(active_splitter_.id, offset_val);
+			active_splitter_.slot->SetOffset(offsets);
+	
+			return FReply::Handled();
 		}
 	}
 
-	return FReply::Handled();
+	return FReply::Unhandled();
+}
+
+/// <summary>
+/// アクティブなスプリッターのインデックスを取得
+/// </summary>
+/// <returns>インデックス</returns>
+int32 SResizableMenuBox::GetActiveSplitterIdx() const
+{
+	// Index探索
+	FGuid target_id = active_splitter_.id;
+	const int32 kIdx = splitter_array_.IndexOfByPredicate(
+		[&target_id](const FSplitter& item) {
+			return item.id == target_id;
+		}
+	);
+
+	return kIdx;
+}
+
+/// <summary>
+/// 隣り合うスプリッターのオフセット値を取得
+/// </summary>
+/// <param name="idx">インデックス</param>
+/// <returns>オフセットのタプル</returns>
+TPair<float, float> SResizableMenuBox::GetNeighborOffsetVal(int32 idx)
+{
+	TPair<float, float> neighbor_offset_val = { 0.f,0.f };
+
+	if (idx != INDEX_NONE) {
+
+		if (splitter_array_.IsValidIndex(idx - 1)) {
+			neighbor_offset_val.Key = splitter_array_[idx - 1].offset_val;
+		}
+
+		if (splitter_array_.IsValidIndex(idx + 1)) {
+			neighbor_offset_val.Value = splitter_array_[idx + 1].offset_val;
+		}
+	}
+
+	return neighbor_offset_val;
 }
 
 /// <summary>
@@ -123,9 +168,9 @@ FReply SResizableMenuBox::OnMouseButtonUp(const FGeometry& MyGeometry, const FPo
 FCursorReply SResizableMenuBox::OnCursorQuery(const FGeometry& MyGeometry, const FPointerEvent& CursorEvent) const
 {
 	auto splitter_ptr = FindFocusedSplitter(CursorEvent.GetScreenSpacePosition());
-	if (splitter_ptr)
-	{
-		if (SplitType == ESplitType::Vertical){
+	if (splitter_ptr){
+
+		if (split_type_ == ESplitType::Vertical){
 			return FCursorReply::Cursor(EMouseCursor::ResizeUpDown);
 		}
 		else{
@@ -143,12 +188,10 @@ FCursorReply SResizableMenuBox::OnCursorQuery(const FGeometry& MyGeometry, const
 /// <returns></returns>
 const FSplitter* SResizableMenuBox::FindFocusedSplitter(const FVector2D CursorPos) const
 {
-	for (const FSplitter& splitter : SplitterArr)
-	{
-		if (splitter.Box.IsValid())
-		{
-			auto box_rect = splitter.Box->GetTickSpaceGeometry().GetRenderBoundingRect();
+	for (const FSplitter& splitter : splitter_array_){
+		if (splitter.box.IsValid()){
 
+			auto box_rect = splitter.box->GetTickSpaceGeometry().GetRenderBoundingRect();
 			if (box_rect.ContainsPoint(CursorPos)) {
 				return &splitter;
 			}

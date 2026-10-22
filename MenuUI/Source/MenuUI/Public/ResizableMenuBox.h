@@ -23,18 +23,18 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Menu Settings")
 	TArray<float> SplitRatio;
 	
-	void ReleaseSlateResources(bool bReleaseChildren) override;
+	void ReleaseSlateResources(bool should_release_children) override;
 
 protected:
-	void OnSlotAdded(UPanelSlot* InSlot) override;
-	virtual void OnSlotRemoved(UPanelSlot* Slot) override;
+	void OnSlotAdded(UPanelSlot* in_slot) override;
+	virtual void OnSlotRemoved(UPanelSlot* slot) override;
 	void SynchronizeProperties() override;
 	TSharedRef<SWidget> RebuildWidget() override;
 
 private:
 	float LerpValue(const float ratio, const float min_val, const float max_val);
-	bool ResizeMenu(const FGuid ID, const FAnchors Anchors);
+	void ResizeMenu(FGuid& id, float offset_val);
 
-	TMap<FGuid, TTuple<UCanvasPanelSlot*, UCanvasPanelSlot*>> SplitWidgetsMap;
-	TSharedPtr<SResizableMenuBox> MyMenuBox;
+	TMap<FGuid, TTuple<UCanvasPanelSlot*, UCanvasPanelSlot*>> split_widget_map_;
+	TSharedPtr<SResizableMenuBox> my_menu_box_;
 };
